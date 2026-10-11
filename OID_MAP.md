@@ -43,6 +43,7 @@ Peta subtree di bawah `1.3.6.1.4.1.50224.3` (walk 2286 baris, 2284 masuk 10 subt
 | 1.3.6.1.4.1.50224.3.1.1.6.0 | Versi firmware | Hex ke teks | Hex `49 47 43 5F ...` menjadi `IGC_V1.2.9ID_Rel` |
 | 1.3.6.1.4.1.50224.3.1.1.20.0 | Serial number OLT | Teks | Sama dengan SN di Running Status |
 | 1.3.6.1.4.1.50224.3.1.1.18.0 | Memori terpakai | Persen | 39 sama dengan Memory Usage 39% di UI; 185444 dari 466988 = 39,7% |
+| 1.3.6.1.4.1.50224.3.1.1.17.0 | CPU terpakai | Persen, bulat, nilai sesaat | Lonjakan 4, 3, dan 5% pada 16:59:56, 17:00:11, 17:00:27 bertepatan dengan puncak di grafik System Monitor UI; nilai tenang 0-1% sama dengan UI. UI memakai sampel 5 detik, jadi sebagian lonjakan terlewat |
 
 ### Port
 
@@ -79,7 +80,6 @@ Port PON tanpa modul bernilai 0 di semua kolom (di UI: "not detected").
 
 | OID | Dugaan arti | Kenapa belum terbukti | Cara membuktikan |
 | --- | --- | --- | --- |
-| 1.3.6.1.4.1.50224.3.1.1.17.0 | CPU terpakai (persen) | Nilai 0 cocok dengan UI 0-3%, tapi 12 sampel semuanya 0 | Baca saat System Monitor di UI menunjukkan CPU di atas 0 |
 | 1.3.6.1.4.1.50224.3.1.1.26 / 27 / 28 | Memori total / terpakai / bebas | Terpakai + bebas = total, tapi satuannya tidak diketahui | Bandingkan dengan total memori di UI jika ada |
 | 1.3.6.1.4.1.50224.3.1.1.8 / 9 / 10 / 11 | Jumlah PON, GE, XGE, total port (2, 4, 1, 7) | Cocok dengan perangkat keras, belum diuji | Tidak mendesak |
 | 1.3.6.1.4.1.50224.3.2.3.1.3 / 4 / 5 | ONU registered / online / offline per PON | Saat ini nilainya sama semua (tidak ada ONU offline), urutan tak bisa dibedakan | Baca saat ada ONU offline secara alami |
@@ -111,6 +111,5 @@ Dilakukan lewat perubahan alami, tanpa memutus layanan:
 
 - [ ] Kolom status ONU 3 / 4 / 5 / 24: baca saat ada ONU offline
 - [ ] Jumlah ONU per PON (`2.3.1.3 / 4 / 5`): baca saat ada ONU offline
-- [ ] CPU (`1.1.17`): baca saat CPU di System Monitor UI di atas 0
 - [ ] Kecepatan port uplink: cocokkan dengan Status > Uplink
 - [ ] Rx ONU: pantau apakah lonjakan positif muncul lagi

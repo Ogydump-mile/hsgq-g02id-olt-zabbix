@@ -12,6 +12,7 @@ zabbix_export:
       Kolom Description setiap item memuat status bukti: [TERKONFIRMASI] sudah dicocokkan dengan web UI, [DUGAAN] belum terbukti.
       Hanya membaca (SNMP GET). Jangan menambahkan OID yang berisi kredensial (community atau tabel akun) ke Zabbix.
       Rx ONU hanya tersedia dengan resolusi 1 dB.
+      Versi 1.0.1-beta. Tag verifikasi=belum_terbukti menandai item yang artinya belum dibuktikan dengan UI.
     groups:
     - name: Templates/Network devices
     items:
@@ -73,7 +74,7 @@ zabbix_export:
         - tag: scope
           value: availability
     - uuid: 766bdb849cc340dca37613e84fd006ef
-      name: 'Versi firmware (potongan: tanpa prefix model)'
+      name: Versi firmware
       type: SNMP_AGENT
       snmp_oid: 1.3.6.1.4.1.50224.3.1.1.6.0
       key: olt.fw.version
@@ -156,18 +157,25 @@ zabbix_export:
         - tag: scope
           value: performance
     - uuid: a05a53704ba644d9ac0d44a03f5bc4b8
-      name: CPU terpakai (KANDIDAT, belum terbukti)
+      name: CPU terpakai
       type: SNMP_AGENT
       snmp_oid: 1.3.6.1.4.1.50224.3.1.1.17.0
       key: olt.cpu.util.candidate
       delay: 1m
       units: '%'
-      description: '[DUGAAN] Nilai 0 cocok dengan CPU 0% di UI, tetapi OID 3.1.1.12/22/23/25 juga selalu 0. Belum ada bukti ini CPU. Tidak diberi trigger.'
+      description: '[TERKONFIRMASI dengan catatan] OID 3.1.1.17.0 mengikuti CPU di System Monitor UI: lonjakan 4, 3, dan 5% pada 16:59:56, 17:00:11, dan 17:00:27 bertepatan (selisih sekitar 1 detik) dengan puncak di grafik UI, dan nilai tenang 0-1% sama dengan UI. Nilainya sesaat dan bulat 1 poin, sedangkan UI memakai sampel 5 detik, jadi sebagian lonjakan bisa terlewat. Karena itu trigger memakai rata-rata 10 menit. Nama key tetap olt.cpu.util.candidate agar riwayat tidak putus.'
       tags:
       - tag: component
         value: cpu
-      - tag: status
-        value: candidate
+      triggers:
+      - uuid: 4a4540ec7de24a1e8c0caa04e43ec3cc
+        expression: avg(/HSGQ GPON OLT by SNMP/olt.cpu.util.candidate,10m)>{$OLT.CPU.WARN}
+        name: 'OLT: CPU tinggi (rata-rata 10 menit > {$OLT.CPU.WARN}%)'
+        priority: WARNING
+        description: Sama dengan ambang alarm CPU bawaan OLT (80%). Rata-rata 10 menit dipakai karena nilai SNMP sesaat dan sering melonjak singkat.
+        tags:
+        - tag: scope
+          value: performance
     - uuid: c12b4a006e9d4acf9d355232bca1b15b
       name: Ketersediaan SNMP
       type: INTERNAL
@@ -202,7 +210,7 @@ zabbix_export:
         value: raw
     discovery_rules:
     - uuid: 932b6d75c6b04445bc725122178d65b5
-      name: Port discovery (IF-MIB)
+      name: Port discovery
       type: SNMP_AGENT
       snmp_oid: discovery[{#IFDESCR},1.3.6.1.2.1.2.2.1.2]
       key: olt.if.discovery
@@ -303,6 +311,8 @@ zabbix_export:
           value: network
         - tag: interface
           value: '{#IFDESCR}'
+        - tag: verifikasi
+          value: belum_terbukti
       - uuid: 14765403f1df4f4798c13c9963c3a6f2
         name: 'Port {#IFDESCR}: error keluar'
         type: DEPENDENT
@@ -326,6 +336,8 @@ zabbix_export:
           value: network
         - tag: interface
           value: '{#IFDESCR}'
+        - tag: verifikasi
+          value: belum_terbukti
       - uuid: 3836d79351d74edfabae802117a18116
         name: 'Port {#IFDESCR}: discard masuk'
         type: DEPENDENT
@@ -349,6 +361,8 @@ zabbix_export:
           value: network
         - tag: interface
           value: '{#IFDESCR}'
+        - tag: verifikasi
+          value: belum_terbukti
       - uuid: 5cceb766e8444218bc865030b8e09e13
         name: 'Port {#IFDESCR}: discard keluar'
         type: DEPENDENT
@@ -372,8 +386,10 @@ zabbix_export:
           value: network
         - tag: interface
           value: '{#IFDESCR}'
+        - tag: verifikasi
+          value: belum_terbukti
       - uuid: 354e95eb40b24f53b7b358b9783c8aec
-        name: 'Port {#IFDESCR}: kecepatan (ifHighSpeed)'
+        name: 'Port {#IFDESCR}: kecepatan'
         type: SNMP_AGENT
         snmp_oid: 1.3.6.1.2.1.31.1.1.1.15.{#SNMPINDEX}
         key: olt.if.speed[{#SNMPINDEX}]
@@ -385,6 +401,8 @@ zabbix_export:
           value: network
         - tag: interface
           value: '{#IFDESCR}'
+        - tag: verifikasi
+          value: belum_terbukti
       trigger_prototypes:
       - uuid: 8567b41138b849c6b3c9050f15556e8e
         expression: last(/HSGQ GPON OLT by SNMP/olt.if.oper[{#SNMPINDEX}])=2 and {$OLT.IF.ALERT:"{#IFDESCR}"}=1
@@ -410,7 +428,7 @@ zabbix_export:
         - tag: scope
           value: capacity
     - uuid: 87fb9442ec234be08b40a53bc78bfac1
-      name: PON discovery (modul SFP dan jumlah ONU)
+      name: PON discovery
       type: SNMP_AGENT
       snmp_oid: discovery[{#PONIDX},1.3.6.1.4.1.50224.3.2.3.1.1]
       key: olt.pon.discovery
@@ -418,7 +436,7 @@ zabbix_export:
       description: Tabel enterprise 3.2.3 hanya berisi port PON (PON01 = 16777472, PON02 = 16777728). Nama PON diambil dari makro {$OLT.PON.NAME:"indeks"}.
       item_prototypes:
       - uuid: 49be83120f544ddb82ecd7331910b85b
-        name: '{$OLT.PON.NAME:"{#SNMPINDEX}"}: ONU registered [dugaan kolom 3]'
+        name: '{$OLT.PON.NAME:"{#SNMPINDEX}"}: ONU registered'
         type: SNMP_AGENT
         snmp_oid: 1.3.6.1.4.1.50224.3.2.3.1.3.{#SNMPINDEX}
         key: olt.pon.onu.c3[{#SNMPINDEX}]
@@ -429,8 +447,10 @@ zabbix_export:
           value: pon
         - tag: pon_index
           value: '{#SNMPINDEX}'
+        - tag: verifikasi
+          value: belum_terbukti
       - uuid: 448e4366fdb74e11a17be8c3c907bc80
-        name: '{$OLT.PON.NAME:"{#SNMPINDEX}"}: ONU online [dugaan kolom 4]'
+        name: '{$OLT.PON.NAME:"{#SNMPINDEX}"}: ONU online'
         type: SNMP_AGENT
         snmp_oid: 1.3.6.1.4.1.50224.3.2.3.1.4.{#SNMPINDEX}
         key: olt.pon.onu.c4[{#SNMPINDEX}]
@@ -441,8 +461,10 @@ zabbix_export:
           value: pon
         - tag: pon_index
           value: '{#SNMPINDEX}'
+        - tag: verifikasi
+          value: belum_terbukti
       - uuid: 89854169af9b481a99d914647aa417f4
-        name: '{$OLT.PON.NAME:"{#SNMPINDEX}"}: ONU offline [dugaan kolom 5]'
+        name: '{$OLT.PON.NAME:"{#SNMPINDEX}"}: ONU offline'
         type: SNMP_AGENT
         snmp_oid: 1.3.6.1.4.1.50224.3.2.3.1.5.{#SNMPINDEX}
         key: olt.pon.onu.c5[{#SNMPINDEX}]
@@ -453,6 +475,8 @@ zabbix_export:
           value: pon
         - tag: pon_index
           value: '{#SNMPINDEX}'
+        - tag: verifikasi
+          value: belum_terbukti
       - uuid: 47d69b68072e4fc7b696efba0ef5f569
         name: '{$OLT.PON.NAME:"{#SNMPINDEX}"}: suhu modul SFP'
         type: SNMP_AGENT
@@ -551,7 +575,7 @@ zabbix_export:
           value: performance
       - uuid: e296a06c67bc46bca53cd61c92b737c8
         expression: abs(last(/HSGQ GPON OLT by SNMP/olt.pon.onu.c3[{#SNMPINDEX}])-last(/HSGQ GPON OLT by SNMP/olt.pon.onu.c4[{#SNMPINDEX}]))>0 and abs(last(/HSGQ GPON OLT by SNMP/olt.pon.onu.c3[{#SNMPINDEX}])-last(/HSGQ GPON OLT by SNMP/olt.pon.onu.c4[{#SNMPINDEX}]))<{$OLT.PON.ONU.DROP.HIGH}
-        name: '{$OLT.PON.NAME:"{#SNMPINDEX}"}: ada ONU tidak online (kolom registered <> online, belum divalidasi)'
+        name: '{$OLT.PON.NAME:"{#SNMPINDEX}"}: ada ONU tidak online (registered <> online)'
         priority: INFO
         description: 'Tidak bergantung urutan kolom 3 dan 4. BELUM terbukti: baru valid kalau ada ONU yang turun secara alami dan angkanya berbeda.'
         tags:
@@ -574,7 +598,7 @@ zabbix_export:
       description: '[TERKONFIRMASI] Kolom 2 = nama ONU dan kolom 15 = serial number, cocok dengan UI. Indeks SNMP = 16777472 + nomor ONU di UI (PON01/13 = 16777485).'
       item_prototypes:
       - uuid: 58b1e23c360a4384a58e81a826da7a06
-        name: 'ONU {#ONUNAME}: daya Rx (resolusi 1 dB)'
+        name: 'ONU {#ONUNAME}: daya Rx'
         type: SNMP_AGENT
         snmp_oid: 1.3.6.1.4.1.50224.3.12.3.1.4.{#SNMPINDEX}.0.0
         key: olt.onu.rx[{#SNMPINDEX}]
@@ -649,7 +673,7 @@ zabbix_export:
         - tag: serial
           value: '{#ONUSN}'
       - uuid: bb01feba6d9d4b62bc941ccbedc48726
-        name: 'ONU {#ONUNAME}: kolom status 3 (kandidat)'
+        name: 'ONU {#ONUNAME}: kode status kolom 3'
         type: SNMP_AGENT
         snmp_oid: 1.3.6.1.4.1.50224.3.12.2.1.3.{#SNMPINDEX}
         key: olt.onu.stat.c3[{#SNMPINDEX}]
@@ -667,8 +691,10 @@ zabbix_export:
           value: '{#ONUNAME}'
         - tag: serial
           value: '{#ONUSN}'
+        - tag: verifikasi
+          value: belum_terbukti
       - uuid: 63dc7db96ed140ee8ae7c5cb22db2974
-        name: 'ONU {#ONUNAME}: kolom status 4 (kandidat)'
+        name: 'ONU {#ONUNAME}: kode status kolom 4'
         type: SNMP_AGENT
         snmp_oid: 1.3.6.1.4.1.50224.3.12.2.1.4.{#SNMPINDEX}
         key: olt.onu.stat.c4[{#SNMPINDEX}]
@@ -686,8 +712,10 @@ zabbix_export:
           value: '{#ONUNAME}'
         - tag: serial
           value: '{#ONUSN}'
+        - tag: verifikasi
+          value: belum_terbukti
       - uuid: 5f4745816eff4dff936d2605aec3e87a
-        name: 'ONU {#ONUNAME}: kolom status 5 (kandidat)'
+        name: 'ONU {#ONUNAME}: kode status kolom 5'
         type: SNMP_AGENT
         snmp_oid: 1.3.6.1.4.1.50224.3.12.2.1.5.{#SNMPINDEX}
         key: olt.onu.stat.c5[{#SNMPINDEX}]
@@ -705,8 +733,10 @@ zabbix_export:
           value: '{#ONUNAME}'
         - tag: serial
           value: '{#ONUSN}'
+        - tag: verifikasi
+          value: belum_terbukti
       - uuid: 9c26ecc0d4064a55a1f281eba17cd10f
-        name: 'ONU {#ONUNAME}: kolom status 24 (kandidat)'
+        name: 'ONU {#ONUNAME}: kode status kolom 24'
         type: SNMP_AGENT
         snmp_oid: 1.3.6.1.4.1.50224.3.12.2.1.24.{#SNMPINDEX}
         key: olt.onu.stat.c24[{#SNMPINDEX}]
@@ -724,6 +754,8 @@ zabbix_export:
           value: '{#ONUNAME}'
         - tag: serial
           value: '{#ONUSN}'
+        - tag: verifikasi
+          value: belum_terbukti
       trigger_prototypes:
       - uuid: 30fe7076fd96437f8328e9ba8ce6d379
         expression: max(/HSGQ GPON OLT by SNMP/olt.onu.rx[{#SNMPINDEX}],15m)<={$OLT.ONU.RX.WARN} and max(/HSGQ GPON OLT by SNMP/olt.onu.rx[{#SNMPINDEX}],15m)>{$OLT.ONU.RX.HIGH}
@@ -785,6 +817,9 @@ zabbix_export:
       description: Sama dengan ambang alarm memori bawaan OLT (80%).
     - macro: '{$OLT.MEM.HIGH}'
       value: '90'
+    - macro: '{$OLT.CPU.WARN}'
+      value: '80'
+      description: Persen. Sama dengan ambang alarm CPU bawaan OLT (80%).
     - macro: '{$OLT.UPTIME.MIN}'
       value: '600'
       description: Detik. Di bawah ini dianggap baru restart.

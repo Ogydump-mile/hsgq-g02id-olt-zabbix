@@ -1,6 +1,6 @@
 # Zabbix template untuk OLT GPON HSGQ-G02ID (SNMP)
 
-**Status: v1.0.0-beta.** Dipetakan dari perangkat nyata (firmware `HSGQ-G02ID_IGC_V1.2.9ID_Rel`) dan diuji di Zabbix 7.4.6. Setiap OID diberi label **terkonfirmasi** (cocok dengan web UI OLT) atau **dugaan** (nilai terbaca tapi artinya belum terbukti).
+**Status: v1.0.1-beta.** Dipetakan dari perangkat nyata (firmware `HSGQ-G02ID_IGC_V1.2.9ID_Rel`) dan diuji di Zabbix 7.4.6. Setiap OID diberi label **terkonfirmasi** (cocok dengan web UI OLT) atau **dugaan** (nilai terbaca tapi artinya belum terbukti).
 
 **English summary:** a community-made Zabbix SNMP template and OID map for the HSGQ-G02ID GPON OLT (enterprise OID `1.3.6.1.4.1.50224`). It covers ports and uplink traffic, PON optics, per-ONU Rx power, distance and uptime. Vendor documentation was not available, so every OID was verified against the OLT web UI; unverified ones are marked as such. Documentation is in Indonesian.
 
@@ -13,11 +13,11 @@
 
 ## Yang dipantau
 
-- Sistem: model, uptime, versi firmware, serial, memori
+- Sistem: model, uptime, versi firmware, serial, memori, CPU
 - Port (PON, GE, XGE): status link, traffic masuk dan keluar, error dan discard
 - PON: suhu, tegangan, arus bias, dan daya Tx modul SFP; jumlah ONU
 - Per ONU (ditemukan otomatis lewat LLD): daya Rx, jarak, lama online, penyebab down terakhir
-- 17 trigger siap pakai (suhu SFP, Rx rendah, memori, uptime, dan lainnya)
+- 18 trigger siap pakai (suhu SFP, Rx rendah, memori, CPU, uptime, dan lainnya)
 
 ## Cara pakai
 
@@ -40,7 +40,7 @@ Butuh Zabbix 7.0 atau lebih baru.
 
 - Tidak ada suhu board/chassis lewat SNMP. Satu-satunya suhu adalah suhu SFP modul PON.
 - Daya Rx ONU hanya beresolusi 1 dB dan dibulatkan ke bawah.
-- Status per ONU (online/offline), jumlah ONU per PON, dan CPU masih **dugaan**: nilainya belum terlihat berubah. Semuanya sengaja tanpa trigger.
+- Status per ONU (online/offline) dan jumlah ONU per PON masih **dugaan**: nilainya belum terlihat berubah. Semuanya sengaja tanpa trigger.
 - GET langsung ke `ifTable` dijawab "No Such Instance" oleh firmware ini walau walk berhasil, jadi template memakai item `walk[]` sebagai sumber data.
 - Kolom status port di tabel enterprise terbalik (2 = up). Template memakai `ifOperStatus` standar.
 - Ambang Rx (-26 dan -28 dBm) adalah usulan, bukan spesifikasi model ONU.
