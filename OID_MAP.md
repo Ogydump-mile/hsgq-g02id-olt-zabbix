@@ -53,6 +53,7 @@ Peta subtree di bawah `1.3.6.1.4.1.50224.3` (walk 2286 baris, 2284 masuk 10 subt
 | 1.3.6.1.2.1.2.2.1.8 | Status link (ifOperStatus) | 1 up, 2 down | 7 dari 7 port cocok dengan UI. Hanya bisa lewat walk, GET dijawab No Such Instance |
 | 1.3.6.1.2.1.31.1.1.1.6 | Octet masuk (ifHCInOctets) | Counter64, kali 8 per detik = bps | Selisih sama dengan kolom enterprise 10.1.1.4; lajunya sebanding dengan Performance Monitor |
 | 1.3.6.1.2.1.31.1.1.1.10 | Octet keluar (ifHCOutOctets) | Counter64, kali 8 per detik = bps | Selisih sama dengan kolom enterprise 10.1.1.26 |
+| 1.3.6.1.2.1.31.1.1.1.15 | Kecepatan link (ifHighSpeed) | Mbps; port down atau tanpa laporan bernilai 0 | Terbukti untuk 100M: GE01 melapor 100 saat web UI OLT (Auto 100M) dan MikroTik sama-sama 100M. Nilai 1000 untuk link 1 Gbps belum diamati |
 
 ### Optik PON (SFP modul OLT)
 
@@ -85,7 +86,6 @@ Port PON tanpa modul bernilai 0 di semua kolom (di UI: "not detected").
 | 1.3.6.1.4.1.50224.3.2.3.1.3 / 4 / 5 | ONU registered / online / offline per PON | Saat ini nilainya sama semua (tidak ada ONU offline), urutan tak bisa dibedakan | Baca saat ada ONU offline secara alami |
 | 1.3.6.1.4.1.50224.3.12.2.1.3 / 4 / 5 / 24 | Status ONU | Semua bernilai 1 untuk ONU yang online | Baca saat ada ONU offline |
 | 1.3.6.1.2.1.2.2.1.13 / 14 / 19 / 20 | Discard dan error port | Selalu 0 selama uptime 122 hari | Tunggu ada error nyata |
-| 1.3.6.1.2.1.31.1.1.1.15 | Kecepatan port (Mbps) | Satu port melapor 100, lainnya 0; belum dicocokkan dengan UI | Bandingkan dengan Status > Uplink |
 | 1.3.6.1.4.1.50224.3.2.4.1.4 / 5 | Modul SFP terdeteksi | 2 untuk port bermodul, 1 untuk yang kosong | Pasang modul di slot kosong |
 | 1.3.6.1.4.1.50224.3.2.4.1.6 / 7 | Vendor dan nomor part modul SFP | Belum dicocokkan dengan label modul | Cek label fisik modul |
 | 1.3.6.1.4.1.50224.3.2.4.1.12 | Daya Rx modul SFP PON | Sekitar -33 dBm; tidak ada padanannya di UI dan janggal untuk banyak ONU aktif | Cari di UI atau tanya vendor |
@@ -111,5 +111,5 @@ Dilakukan lewat perubahan alami, tanpa memutus layanan:
 
 - [ ] Kolom status ONU 3 / 4 / 5 / 24: baca saat ada ONU offline
 - [ ] Jumlah ONU per PON (`2.3.1.3 / 4 / 5`): baca saat ada ONU offline
-- [ ] Kecepatan port uplink: cocokkan dengan Status > Uplink
+- [ ] Kecepatan port uplink: baca nilai saat link 1 Gbps (seharusnya 1000)
 - [ ] Rx ONU: pantau apakah lonjakan positif muncul lagi

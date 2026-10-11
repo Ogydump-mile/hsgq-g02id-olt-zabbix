@@ -1,6 +1,6 @@
 # Zabbix template untuk OLT GPON HSGQ-G02ID (SNMP)
 
-**Status: v1.0.1-beta.** Dipetakan dari perangkat nyata (firmware `HSGQ-G02ID_IGC_V1.2.9ID_Rel`) dan diuji di Zabbix 7.4.6. Setiap OID diberi label **terkonfirmasi** (cocok dengan web UI OLT) atau **dugaan** (nilai terbaca tapi artinya belum terbukti).
+**Status: v1.0.2-beta.** Dipetakan dari perangkat nyata (firmware `HSGQ-G02ID_IGC_V1.2.9ID_Rel`) dan diuji di Zabbix 7.4.6. Setiap OID diberi label **terkonfirmasi** (cocok dengan web UI OLT) atau **dugaan** (nilai terbaca tapi artinya belum terbukti).
 
 **English summary:** a community-made Zabbix SNMP template and OID map for the HSGQ-G02ID GPON OLT (enterprise OID `1.3.6.1.4.1.50224`). It covers ports and uplink traffic, PON optics, per-ONU Rx power, distance and uptime. Vendor documentation was not available, so every OID was verified against the OLT web UI; unverified ones are marked as such. Documentation is in Indonesian.
 
@@ -14,10 +14,10 @@
 ## Yang dipantau
 
 - Sistem: model, uptime, versi firmware, serial, memori, CPU
-- Port (PON, GE, XGE): status link, traffic masuk dan keluar, error dan discard
+- Port (PON, GE, XGE): status link, kecepatan link, traffic masuk dan keluar, error dan discard
 - PON: suhu, tegangan, arus bias, dan daya Tx modul SFP; jumlah ONU
 - Per ONU (ditemukan otomatis lewat LLD): daya Rx, jarak, lama online, penyebab down terakhir
-- 18 trigger siap pakai (suhu SFP, Rx rendah, memori, CPU, uptime, dan lainnya)
+- 19 trigger siap pakai (suhu SFP, Rx rendah, memori, CPU, uptime, kecepatan uplink turun, dan lainnya)
 
 ## Cara pakai
 

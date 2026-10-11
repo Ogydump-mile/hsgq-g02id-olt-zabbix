@@ -12,7 +12,7 @@ zabbix_export:
       Kolom Description setiap item memuat status bukti: [TERKONFIRMASI] sudah dicocokkan dengan web UI, [DUGAAN] belum terbukti.
       Hanya membaca (SNMP GET). Jangan menambahkan OID yang berisi kredensial (community atau tabel akun) ke Zabbix.
       Rx ONU hanya tersedia dengan resolusi 1 dB.
-      Versi 1.0.1-beta. Tag verifikasi=belum_terbukti menandai item yang artinya belum dibuktikan dengan UI.
+      Versi 1.0.2-beta. Tag verifikasi=belum_terbukti menandai item yang artinya belum dibuktikan dengan UI.
     groups:
     - name: Templates/Network devices
     items:
@@ -393,9 +393,9 @@ zabbix_export:
         type: SNMP_AGENT
         snmp_oid: 1.3.6.1.2.1.31.1.1.1.15.{#SNMPINDEX}
         key: olt.if.speed[{#SNMPINDEX}]
-        delay: 1h
+        delay: 5m
         units: '!Mbps'
-        description: '[DUGAAN] GE01 = 100, port lain = 0 (tidak dilaporkan). Dianggap Mbps. Cocokkan dengan Status > Uplink di UI.'
+        description: 'Kecepatan link (ifHighSpeed, Mbps). Terbukti untuk 100M: GE01 melapor 100 saat UI OLT (Auto 100M) dan MikroTik sama-sama 100M. Nilai 1000 untuk link 1 Gbps belum diamati. Port yang down atau tidak melapor bernilai 0.'
         tags:
         - tag: component
           value: network
@@ -423,10 +423,18 @@ zabbix_export:
         expression: (avg(/HSGQ GPON OLT by SNMP/olt.if.in[{#SNMPINDEX}],10m)>{$OLT.IF.CAP.MBPS:"{#IFDESCR}"}*10000*{$OLT.IF.UTIL.WARN} or avg(/HSGQ GPON OLT by SNMP/olt.if.out[{#SNMPINDEX}],10m)>{$OLT.IF.CAP.MBPS:"{#IFDESCR}"}*10000*{$OLT.IF.UTIL.WARN}) and {$OLT.IF.CAP.MBPS:"{#IFDESCR}"}>0
         name: 'Port {#IFDESCR}: traffic > {$OLT.IF.UTIL.WARN}% kapasitas (10 menit)'
         priority: WARNING
-        description: Kapasitas diisi lewat makro {$OLT.IF.CAP.MBPS:"nama port"}. Nilai GE01 = 100 mengikuti laporan OLT dan BELUM terkonfirmasi. Cek Status > Uplink, lalu sesuaikan.
+        description: Kapasitas diisi lewat makro {$OLT.IF.CAP.MBPS:"nama port"}. Nilai bawaan GE01 = 1000 (link 1 Gbps). Sesuaikan jika kecepatan link berbeda.
         tags:
         - tag: scope
           value: capacity
+      - uuid: 43a8fe27642449b481787412738ed329
+        expression: last(/HSGQ GPON OLT by SNMP/olt.if.speed[{#SNMPINDEX}])>0 and last(/HSGQ GPON OLT by SNMP/olt.if.speed[{#SNMPINDEX}])<{$OLT.IF.SPEED.MIN:"{#IFDESCR}"} and {$OLT.IF.SPEED.MIN:"{#IFDESCR}"}>0
+        name: 'Port {#IFDESCR}: kecepatan link di bawah {$OLT.IF.SPEED.MIN:"{#IFDESCR}"} Mbps'
+        priority: AVERAGE
+        description: Link naik tetapi hasil negosiasinya lebih rendah dari yang diharapkan, misalnya 1 Gbps turun ke 100 Mbps. Penyebab umum adalah kabel atau konektor bermasalah atau negosiasi yang tersangkut. Pada satu kasus nyata, uplink turun ke 100M selama berbulan-bulan tanpa terdeteksi. Aktif hanya untuk port yang makro {$OLT.IF.SPEED.MIN:"nama port"} bernilai lebih dari 0.
+        tags:
+        - tag: scope
+          value: performance
     - uuid: 87fb9442ec234be08b40a53bc78bfac1
       name: PON discovery
       type: SNMP_AGENT
@@ -804,8 +812,14 @@ zabbix_export:
       value: '0'
       description: Kapasitas link (Mbps) untuk alarm utilisasi. 0 = alarm utilisasi nonaktif.
     - macro: '{$OLT.IF.CAP.MBPS:"GE01"}'
-      value: '100'
-      description: BELUM TERKONFIRMASI. Nilai ini dari ifHighSpeed yang dilaporkan OLT. Cek di Status > Uplink.
+      value: '1000'
+      description: Kapasitas uplink GE01 (Mbps). Port ini berkemampuan 1 Gbps. Sesuaikan jika kecepatan link berbeda.
+    - macro: '{$OLT.IF.SPEED.MIN}'
+      value: '0'
+      description: Kecepatan link minimum yang diharapkan (Mbps). 0 = alarm kecepatan nonaktif.
+    - macro: '{$OLT.IF.SPEED.MIN:"GE01"}'
+      value: '1000'
+      description: Alarm jika link GE01 naik tetapi kecepatannya di bawah 1000 Mbps (misalnya turun ke 100M karena kabel).
     - macro: '{$OLT.IF.UTIL.WARN}'
       value: '80'
       description: Ambang utilisasi (%) dari makro kapasitas.
