@@ -1,0 +1,864 @@
+zabbix_export:
+  version: '7.0'
+  template_groups:
+  - uuid: 36bff6c29af64692839d077febfc7079
+    name: Templates/Network devices
+  templates:
+  - uuid: 1019c9d3631e4dae98749c8750354b7b
+    template: HSGQ GPON OLT by SNMP
+    name: HSGQ GPON OLT by SNMP
+    description: |-
+      Template untuk OLT HSGQ-G02ID (firmware HSGQ-G02ID_IGC_V1.2.9ID_Rel), hasil pemetaan SNMP dari perangkat nyata. Enterprise OID 1.3.6.1.4.1.50224.
+      Kolom Description setiap item memuat status bukti: [TERKONFIRMASI] sudah dicocokkan dengan web UI, [DUGAAN] belum terbukti.
+      Hanya membaca (SNMP GET). Jangan menambahkan OID yang berisi kredensial (community atau tabel akun) ke Zabbix.
+      Rx ONU hanya tersedia dengan resolusi 1 dB.
+      Versi 1.0.1-beta. Tag verifikasi=belum_terbukti menandai item yang artinya belum dibuktikan dengan UI.
+    groups:
+    - name: Templates/Network devices
+    items:
+    - uuid: fcb4de13fe964f80ae1c98a68de14767
+      name: Model (sysDescr)
+      type: SNMP_AGENT
+      snmp_oid: 1.3.6.1.2.1.1.1.0
+      key: olt.model
+      delay: 1h
+      trends: '0'
+      value_type: CHAR
+      description: '[TERKONFIRMASI] Nilai HSGQ-G02ID sama dengan Product Model di web UI.'
+      preprocessing:
+      - type: DISCARD_UNCHANGED_HEARTBEAT
+        parameters:
+        - 1d
+      tags:
+      - tag: component
+        value: system
+    - uuid: 05d040eef8f949549178b50358ea2d2c
+      name: Nama perangkat (sysName)
+      type: SNMP_AGENT
+      snmp_oid: 1.3.6.1.2.1.1.5.0
+      key: olt.sysname
+      delay: 1h
+      trends: '0'
+      value_type: CHAR
+      description: '[TERKONFIRMASI] Nilai sama dengan Device Name di web UI.'
+      preprocessing:
+      - type: DISCARD_UNCHANGED_HEARTBEAT
+        parameters:
+        - 1d
+      tags:
+      - tag: component
+        value: system
+    - uuid: e7eeef7e70cd4d388c166e806d72e85c
+      name: Uptime
+      type: SNMP_AGENT
+      snmp_oid: 1.3.6.1.2.1.1.3.0
+      key: olt.uptime
+      delay: 1m
+      value_type: FLOAT
+      units: uptime
+      description: '[TERKONFIRMASI] sysUpTime dalam centidetik. 122 hari 23:14 pada 14:54 cocok dengan Running Time di UI (122 hari 23:07 pada 14:46).'
+      preprocessing:
+      - type: MULTIPLIER
+        parameters:
+        - '0.01'
+      tags:
+      - tag: component
+        value: system
+      triggers:
+      - uuid: 799a6b688d0a45cd9dcd7d67eddf4449
+        expression: last(/HSGQ GPON OLT by SNMP/olt.uptime)<{$OLT.UPTIME.MIN}
+        name: 'OLT: baru restart (uptime < 10 menit)'
+        priority: WARNING
+        description: Uptime di bawah ambang. OLT restart dan semua ONU sempat putus.
+        tags:
+        - tag: scope
+          value: availability
+    - uuid: 766bdb849cc340dca37613e84fd006ef
+      name: Versi firmware
+      type: SNMP_AGENT
+      snmp_oid: 1.3.6.1.4.1.50224.3.1.1.6.0
+      key: olt.fw.version
+      delay: 1h
+      trends: '0'
+      value_type: CHAR
+      description: '[TERKONFIRMASI] Hex 49 47 43 5F ... diubah jadi teks IGC_V1.2.9ID_Rel, bagian belakang dari Firmware Version di UI (HSGQ-G02ID_IGC_V1.2.9ID_Rel).'
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - |-
+          var s = String(value).trim();
+          if (/^[0-9A-Fa-f]{2}(\s[0-9A-Fa-f]{2})*$/.test(s)) {
+            var parts = s.split(/\s+/);
+            var out = '';
+            for (var i = 0; i < parts.length; i++) {
+              var c = parseInt(parts[i], 16);
+              if (c > 0) {
+                out += String.fromCharCode(c);
+              }
+            }
+            return out;
+          }
+          return s;
+      - type: DISCARD_UNCHANGED_HEARTBEAT
+        parameters:
+        - 1d
+      tags:
+      - tag: component
+        value: system
+      triggers:
+      - uuid: 38fd62f5b5e945a09ef1d438d1d34837
+        expression: change(/HSGQ GPON OLT by SNMP/olt.fw.version)=1 and length(last(/HSGQ GPON OLT by SNMP/olt.fw.version))>0
+        name: 'OLT: versi firmware berubah'
+        priority: INFO
+        tags:
+        - tag: scope
+          value: configuration
+    - uuid: c43e4b0e905243d1a2749f977c191e2d
+      name: Serial number OLT
+      type: SNMP_AGENT
+      snmp_oid: 1.3.6.1.4.1.50224.3.1.1.20.0
+      key: olt.serial
+      delay: 1h
+      trends: '0'
+      value_type: CHAR
+      description: '[TERKONFIRMASI] Sama dengan SN di Running Status web UI.'
+      preprocessing:
+      - type: DISCARD_UNCHANGED_HEARTBEAT
+        parameters:
+        - 1d
+      tags:
+      - tag: component
+        value: system
+    - uuid: 55d67017865a4595b7381ba4a8fd4ff5
+      name: Memori terpakai
+      type: SNMP_AGENT
+      snmp_oid: 1.3.6.1.4.1.50224.3.1.1.18.0
+      key: olt.mem.util
+      delay: 1m
+      units: '%'
+      description: '[TERKONFIRMASI] Nilai 39 sama dengan Memory Usage 39% di UI. Konsisten dengan used/total OID 3.1.1.27/26 = 39,7%.'
+      tags:
+      - tag: component
+        value: memory
+      triggers:
+      - uuid: 2fcced15fd4a459f8d2c42f9fdf8a070
+        expression: min(/HSGQ GPON OLT by SNMP/olt.mem.util,5m)>{$OLT.MEM.WARN} and min(/HSGQ GPON OLT by SNMP/olt.mem.util,5m)<={$OLT.MEM.HIGH}
+        name: 'OLT: memori tinggi (> {$OLT.MEM.WARN}%)'
+        priority: WARNING
+        description: 'Ambang alarm bawaan OLT: memori 80%.'
+        tags:
+        - tag: scope
+          value: performance
+      - uuid: bf62fb1c7c054485af45c5fd3cf03bd2
+        expression: min(/HSGQ GPON OLT by SNMP/olt.mem.util,5m)>{$OLT.MEM.HIGH}
+        name: 'OLT: memori sangat tinggi (> {$OLT.MEM.HIGH}%)'
+        priority: HIGH
+        tags:
+        - tag: scope
+          value: performance
+    - uuid: a05a53704ba644d9ac0d44a03f5bc4b8
+      name: CPU terpakai
+      type: SNMP_AGENT
+      snmp_oid: 1.3.6.1.4.1.50224.3.1.1.17.0
+      key: olt.cpu.util.candidate
+      delay: 1m
+      units: '%'
+      description: '[TERKONFIRMASI dengan catatan] OID 3.1.1.17.0 mengikuti CPU di System Monitor UI: lonjakan 4, 3, dan 5% pada 16:59:56, 17:00:11, dan 17:00:27 bertepatan (selisih sekitar 1 detik) dengan puncak di grafik UI, dan nilai tenang 0-1% sama dengan UI. Nilainya sesaat dan bulat 1 poin, sedangkan UI memakai sampel 5 detik, jadi sebagian lonjakan bisa terlewat. Karena itu trigger memakai rata-rata 10 menit. Nama key tetap olt.cpu.util.candidate agar riwayat tidak putus.'
+      tags:
+      - tag: component
+        value: cpu
+      triggers:
+      - uuid: 4a4540ec7de24a1e8c0caa04e43ec3cc
+        expression: avg(/HSGQ GPON OLT by SNMP/olt.cpu.util.candidate,10m)>{$OLT.CPU.WARN}
+        name: 'OLT: CPU tinggi (rata-rata 10 menit > {$OLT.CPU.WARN}%)'
+        priority: WARNING
+        description: Sama dengan ambang alarm CPU bawaan OLT (80%). Rata-rata 10 menit dipakai karena nilai SNMP sesaat dan sering melonjak singkat.
+        tags:
+        - tag: scope
+          value: performance
+    - uuid: c12b4a006e9d4acf9d355232bca1b15b
+      name: Ketersediaan SNMP
+      type: INTERNAL
+      key: zabbix[host,snmp,available]
+      delay: 1m
+      history: 7d
+      description: 'Status koneksi SNMP dari sisi Zabbix: 0 tidak diketahui, 1 tersedia, 2 tidak tersedia.'
+      tags:
+      - tag: component
+        value: health
+      triggers:
+      - uuid: 6d0e41486184408b8c1d0b4212119d95
+        expression: max(/HSGQ GPON OLT by SNMP/zabbix[host,snmp,available],5m)=0
+        name: 'OLT: tidak ada data SNMP selama 5 menit'
+        priority: HIGH
+        description: Zabbix tidak mendapat jawaban SNMP dari OLT. Cek jaringan manajemen, community, dan CPU OLT.
+        tags:
+        - tag: scope
+          value: availability
+    - uuid: 94ca7a03c2a04e4e93a322dac19cc1c8
+      name: SNMP walk ifTable (status dan error)
+      type: SNMP_AGENT
+      snmp_oid: walk[1.3.6.1.2.1.2.2.1.8,1.3.6.1.2.1.2.2.1.13,1.3.6.1.2.1.2.2.1.14,1.3.6.1.2.1.2.2.1.19,1.3.6.1.2.1.2.2.1.20]
+      key: olt.if.walk
+      delay: 1m
+      history: '0'
+      trends: '0'
+      value_type: TEXT
+      description: '[TERKONFIRMASI] Master item untuk status link, error, dan discard port. GET langsung ke OID ifTable dijawab No Such Instance oleh OLT, tetapi walk berhasil.'
+      tags:
+      - tag: component
+        value: raw
+    discovery_rules:
+    - uuid: 932b6d75c6b04445bc725122178d65b5
+      name: Port discovery
+      type: SNMP_AGENT
+      snmp_oid: discovery[{#IFDESCR},1.3.6.1.2.1.2.2.1.2]
+      key: olt.if.discovery
+      delay: 1h
+      filter:
+        evaltype: AND
+        conditions:
+        - macro: '{#IFDESCR}'
+          value: '{$OLT.IF.MATCHES}'
+          formulaid: A
+      description: Menemukan port PON/GE/XGE dari IF-MIB. vlanif0 dikecualikan lewat makro {$OLT.IF.MATCHES}.
+      item_prototypes:
+      - uuid: 072fb058823a403daa7b038a295b3415
+        name: 'Port {#IFDESCR}: status link'
+        type: DEPENDENT
+        key: olt.if.oper[{#SNMPINDEX}]
+        delay: '0'
+        description: '[TERKONFIRMASI] IF-MIB standar: 1 up, 2 down. 7 dari 7 port cocok dengan UI. Dibaca lewat walk (item olt.if.walk), karena GET langsung ke ifTable dijawab No Such Instance oleh OLT. Perhatian: kolom status di tabel enterprise (3.2.1.1.6) maknanya terbalik, jangan dipakai.'
+        valuemap:
+          name: IF-MIB ifOperStatus
+        preprocessing:
+        - type: SNMP_WALK_VALUE
+          parameters:
+          - 1.3.6.1.2.1.2.2.1.8.{#SNMPINDEX}
+          - '0'
+        - type: DISCARD_UNCHANGED_HEARTBEAT
+          parameters:
+          - 1h
+        master_item:
+          key: olt.if.walk
+        tags:
+        - tag: component
+          value: network
+        - tag: interface
+          value: '{#IFDESCR}'
+      - uuid: 3227856d339742e090515cccdee3d43b
+        name: 'Port {#IFDESCR}: traffic masuk'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.2.1.31.1.1.1.6.{#SNMPINDEX}
+        key: olt.if.in[{#SNMPINDEX}]
+        delay: 1m
+        value_type: FLOAT
+        units: bps
+        description: '[TERKONFIRMASI] ifHCInOctets (Counter64). Selisih sama dengan kolom enterprise 3.10.1.1.4, dan lajunya sebanding dengan Performance Monitor.'
+        preprocessing:
+        - type: CHANGE_PER_SECOND
+          parameters:
+          - ''
+        - type: MULTIPLIER
+          parameters:
+          - '8'
+        tags:
+        - tag: component
+          value: network
+        - tag: interface
+          value: '{#IFDESCR}'
+      - uuid: b4c2996279c342348e9e1ccdeaa0eb67
+        name: 'Port {#IFDESCR}: traffic keluar'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.2.1.31.1.1.1.10.{#SNMPINDEX}
+        key: olt.if.out[{#SNMPINDEX}]
+        delay: 1m
+        value_type: FLOAT
+        units: bps
+        description: '[TERKONFIRMASI] ifHCOutOctets (Counter64). Selisih sama dengan kolom enterprise 3.10.1.1.26.'
+        preprocessing:
+        - type: CHANGE_PER_SECOND
+          parameters:
+          - ''
+        - type: MULTIPLIER
+          parameters:
+          - '8'
+        tags:
+        - tag: component
+          value: network
+        - tag: interface
+          value: '{#IFDESCR}'
+      - uuid: 944cf3bebe144ce5a98659ac69aa8ce2
+        name: 'Port {#IFDESCR}: error masuk'
+        type: DEPENDENT
+        key: olt.if.inerr[{#SNMPINDEX}]
+        delay: '0'
+        value_type: FLOAT
+        units: pps
+        description: '[DUGAAN] Semua port bernilai 0 setelah 122 hari. Belum terbukti counter ini aktif menghitung.'
+        preprocessing:
+        - type: SNMP_WALK_VALUE
+          parameters:
+          - 1.3.6.1.2.1.2.2.1.14.{#SNMPINDEX}
+          - '0'
+        - type: CHANGE_PER_SECOND
+          parameters:
+          - ''
+        master_item:
+          key: olt.if.walk
+        tags:
+        - tag: component
+          value: network
+        - tag: interface
+          value: '{#IFDESCR}'
+        - tag: verifikasi
+          value: belum_terbukti
+      - uuid: 14765403f1df4f4798c13c9963c3a6f2
+        name: 'Port {#IFDESCR}: error keluar'
+        type: DEPENDENT
+        key: olt.if.outerr[{#SNMPINDEX}]
+        delay: '0'
+        value_type: FLOAT
+        units: pps
+        description: '[DUGAAN] Sama seperti error masuk.'
+        preprocessing:
+        - type: SNMP_WALK_VALUE
+          parameters:
+          - 1.3.6.1.2.1.2.2.1.20.{#SNMPINDEX}
+          - '0'
+        - type: CHANGE_PER_SECOND
+          parameters:
+          - ''
+        master_item:
+          key: olt.if.walk
+        tags:
+        - tag: component
+          value: network
+        - tag: interface
+          value: '{#IFDESCR}'
+        - tag: verifikasi
+          value: belum_terbukti
+      - uuid: 3836d79351d74edfabae802117a18116
+        name: 'Port {#IFDESCR}: discard masuk'
+        type: DEPENDENT
+        key: olt.if.indisc[{#SNMPINDEX}]
+        delay: '0'
+        value_type: FLOAT
+        units: pps
+        description: '[DUGAAN] Sama seperti error masuk.'
+        preprocessing:
+        - type: SNMP_WALK_VALUE
+          parameters:
+          - 1.3.6.1.2.1.2.2.1.13.{#SNMPINDEX}
+          - '0'
+        - type: CHANGE_PER_SECOND
+          parameters:
+          - ''
+        master_item:
+          key: olt.if.walk
+        tags:
+        - tag: component
+          value: network
+        - tag: interface
+          value: '{#IFDESCR}'
+        - tag: verifikasi
+          value: belum_terbukti
+      - uuid: 5cceb766e8444218bc865030b8e09e13
+        name: 'Port {#IFDESCR}: discard keluar'
+        type: DEPENDENT
+        key: olt.if.outdisc[{#SNMPINDEX}]
+        delay: '0'
+        value_type: FLOAT
+        units: pps
+        description: '[DUGAAN] Sama seperti error masuk.'
+        preprocessing:
+        - type: SNMP_WALK_VALUE
+          parameters:
+          - 1.3.6.1.2.1.2.2.1.19.{#SNMPINDEX}
+          - '0'
+        - type: CHANGE_PER_SECOND
+          parameters:
+          - ''
+        master_item:
+          key: olt.if.walk
+        tags:
+        - tag: component
+          value: network
+        - tag: interface
+          value: '{#IFDESCR}'
+        - tag: verifikasi
+          value: belum_terbukti
+      - uuid: 354e95eb40b24f53b7b358b9783c8aec
+        name: 'Port {#IFDESCR}: kecepatan'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.2.1.31.1.1.1.15.{#SNMPINDEX}
+        key: olt.if.speed[{#SNMPINDEX}]
+        delay: 1h
+        units: '!Mbps'
+        description: '[DUGAAN] GE01 = 100, port lain = 0 (tidak dilaporkan). Dianggap Mbps. Cocokkan dengan Status > Uplink di UI.'
+        tags:
+        - tag: component
+          value: network
+        - tag: interface
+          value: '{#IFDESCR}'
+        - tag: verifikasi
+          value: belum_terbukti
+      trigger_prototypes:
+      - uuid: 8567b41138b849c6b3c9050f15556e8e
+        expression: last(/HSGQ GPON OLT by SNMP/olt.if.oper[{#SNMPINDEX}])=2 and {$OLT.IF.ALERT:"{#IFDESCR}"}=1
+        name: 'Port {#IFDESCR}: link down'
+        priority: HIGH
+        description: Hanya aktif untuk port yang makro {$OLT.IF.ALERT:"nama port"} bernilai 1 (default PON01 dan GE01). GE02-04, XGE01, dan PON02 memang down dan tidak dialarmkan.
+        tags:
+        - tag: scope
+          value: availability
+      - uuid: 8162103d91404b4383da3779701d1fff
+        expression: min(/HSGQ GPON OLT by SNMP/olt.if.inerr[{#SNMPINDEX}],5m)>{$OLT.IF.ERRORS.WARN} or min(/HSGQ GPON OLT by SNMP/olt.if.outerr[{#SNMPINDEX}],5m)>{$OLT.IF.ERRORS.WARN}
+        name: 'Port {#IFDESCR}: error/discard tinggi'
+        priority: WARNING
+        tags:
+        - tag: scope
+          value: performance
+      - uuid: f7818769cb9b4b2f91f55777c457dc50
+        expression: (avg(/HSGQ GPON OLT by SNMP/olt.if.in[{#SNMPINDEX}],10m)>{$OLT.IF.CAP.MBPS:"{#IFDESCR}"}*10000*{$OLT.IF.UTIL.WARN} or avg(/HSGQ GPON OLT by SNMP/olt.if.out[{#SNMPINDEX}],10m)>{$OLT.IF.CAP.MBPS:"{#IFDESCR}"}*10000*{$OLT.IF.UTIL.WARN}) and {$OLT.IF.CAP.MBPS:"{#IFDESCR}"}>0
+        name: 'Port {#IFDESCR}: traffic > {$OLT.IF.UTIL.WARN}% kapasitas (10 menit)'
+        priority: WARNING
+        description: Kapasitas diisi lewat makro {$OLT.IF.CAP.MBPS:"nama port"}. Nilai GE01 = 100 mengikuti laporan OLT dan BELUM terkonfirmasi. Cek Status > Uplink, lalu sesuaikan.
+        tags:
+        - tag: scope
+          value: capacity
+    - uuid: 87fb9442ec234be08b40a53bc78bfac1
+      name: PON discovery
+      type: SNMP_AGENT
+      snmp_oid: discovery[{#PONIDX},1.3.6.1.4.1.50224.3.2.3.1.1]
+      key: olt.pon.discovery
+      delay: 1h
+      description: Tabel enterprise 3.2.3 hanya berisi port PON (PON01 = 16777472, PON02 = 16777728). Nama PON diambil dari makro {$OLT.PON.NAME:"indeks"}.
+      item_prototypes:
+      - uuid: 49be83120f544ddb82ecd7331910b85b
+        name: '{$OLT.PON.NAME:"{#SNMPINDEX}"}: ONU registered'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.4.1.50224.3.2.3.1.3.{#SNMPINDEX}
+        key: olt.pon.onu.c3[{#SNMPINDEX}]
+        delay: 1m
+        description: '[DUGAAN] Urutan kolom 3/4/5 = registered/online/offline mengikuti urutan UI (PON01: 52/52/0, PON02: 0/0/0), tetapi registered = online sehingga kolom 3 dan 4 belum bisa dibedakan. Terbukti saat ada ONU yang turun secara alami.'
+        tags:
+        - tag: component
+          value: pon
+        - tag: pon_index
+          value: '{#SNMPINDEX}'
+        - tag: verifikasi
+          value: belum_terbukti
+      - uuid: 448e4366fdb74e11a17be8c3c907bc80
+        name: '{$OLT.PON.NAME:"{#SNMPINDEX}"}: ONU online'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.4.1.50224.3.2.3.1.4.{#SNMPINDEX}
+        key: olt.pon.onu.c4[{#SNMPINDEX}]
+        delay: 1m
+        description: '[DUGAAN] Urutan kolom 3/4/5 = registered/online/offline mengikuti urutan UI (PON01: 52/52/0, PON02: 0/0/0), tetapi registered = online sehingga kolom 3 dan 4 belum bisa dibedakan. Terbukti saat ada ONU yang turun secara alami.'
+        tags:
+        - tag: component
+          value: pon
+        - tag: pon_index
+          value: '{#SNMPINDEX}'
+        - tag: verifikasi
+          value: belum_terbukti
+      - uuid: 89854169af9b481a99d914647aa417f4
+        name: '{$OLT.PON.NAME:"{#SNMPINDEX}"}: ONU offline'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.4.1.50224.3.2.3.1.5.{#SNMPINDEX}
+        key: olt.pon.onu.c5[{#SNMPINDEX}]
+        delay: 1m
+        description: '[DUGAAN] Urutan kolom 3/4/5 = registered/online/offline mengikuti urutan UI (PON01: 52/52/0, PON02: 0/0/0), tetapi registered = online sehingga kolom 3 dan 4 belum bisa dibedakan. Terbukti saat ada ONU yang turun secara alami.'
+        tags:
+        - tag: component
+          value: pon
+        - tag: pon_index
+          value: '{#SNMPINDEX}'
+        - tag: verifikasi
+          value: belum_terbukti
+      - uuid: 47d69b68072e4fc7b696efba0ef5f569
+        name: '{$OLT.PON.NAME:"{#SNMPINDEX}"}: suhu modul SFP'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.4.1.50224.3.2.4.1.8.{#SNMPINDEX}
+        key: olt.pon.sfp.temp[{#SNMPINDEX}]
+        delay: 5m
+        value_type: FLOAT
+        units: °C
+        description: '[TERKONFIRMASI] Cocok dengan halaman PON Optical Diagnose (PON01: 44,70 C, 3,31 V, 27,36 mA, 8,1000 dBm), skala 1/100. PON02 bernilai 0 saat modul tidak terdeteksi.'
+        preprocessing:
+        - type: MULTIPLIER
+          parameters:
+          - '0.01'
+        tags:
+        - tag: component
+          value: pon
+        - tag: pon_index
+          value: '{#SNMPINDEX}'
+      - uuid: a0cc106a18834de6bbd39cff5cd21792
+        name: '{$OLT.PON.NAME:"{#SNMPINDEX}"}: tegangan modul SFP'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.4.1.50224.3.2.4.1.9.{#SNMPINDEX}
+        key: olt.pon.sfp.volt[{#SNMPINDEX}]
+        delay: 5m
+        value_type: FLOAT
+        units: V
+        description: '[TERKONFIRMASI] Cocok dengan halaman PON Optical Diagnose (PON01: 44,70 C, 3,31 V, 27,36 mA, 8,1000 dBm), skala 1/100. PON02 bernilai 0 saat modul tidak terdeteksi.'
+        preprocessing:
+        - type: MULTIPLIER
+          parameters:
+          - '0.01'
+        tags:
+        - tag: component
+          value: pon
+        - tag: pon_index
+          value: '{#SNMPINDEX}'
+      - uuid: 6307f4ba7f2840b8ab899df413e1a245
+        name: '{$OLT.PON.NAME:"{#SNMPINDEX}"}: arus bias modul SFP'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.4.1.50224.3.2.4.1.10.{#SNMPINDEX}
+        key: olt.pon.sfp.bias[{#SNMPINDEX}]
+        delay: 5m
+        value_type: FLOAT
+        units: mA
+        description: '[TERKONFIRMASI] Cocok dengan halaman PON Optical Diagnose (PON01: 44,70 C, 3,31 V, 27,36 mA, 8,1000 dBm), skala 1/100. PON02 bernilai 0 saat modul tidak terdeteksi.'
+        preprocessing:
+        - type: MULTIPLIER
+          parameters:
+          - '0.01'
+        tags:
+        - tag: component
+          value: pon
+        - tag: pon_index
+          value: '{#SNMPINDEX}'
+      - uuid: d372251899a549b38efa4471ffacc7bc
+        name: '{$OLT.PON.NAME:"{#SNMPINDEX}"}: daya Tx modul SFP'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.4.1.50224.3.2.4.1.11.{#SNMPINDEX}
+        key: olt.pon.sfp.tx[{#SNMPINDEX}]
+        delay: 5m
+        value_type: FLOAT
+        units: dBm
+        description: '[TERKONFIRMASI] Cocok dengan halaman PON Optical Diagnose (PON01: 44,70 C, 3,31 V, 27,36 mA, 8,1000 dBm), skala 1/100. PON02 bernilai 0 saat modul tidak terdeteksi. Daya Rx modul (kolom 12) sengaja tidak dipantau: nilainya -33,01 dBm tidak pernah berubah dan tidak tampil di UI.'
+        preprocessing:
+        - type: MULTIPLIER
+          parameters:
+          - '0.01'
+        tags:
+        - tag: component
+          value: pon
+        - tag: pon_index
+          value: '{#SNMPINDEX}'
+      trigger_prototypes:
+      - uuid: fcc1311074d24b52accc4cbf97884f8a
+        expression: min(/HSGQ GPON OLT by SNMP/olt.pon.sfp.temp[{#SNMPINDEX}],5m)>{$OLT.PON.TEMP.WARN} and min(/HSGQ GPON OLT by SNMP/olt.pon.sfp.temp[{#SNMPINDEX}],5m)<={$OLT.PON.TEMP.HIGH}
+        name: '{$OLT.PON.NAME:"{#SNMPINDEX}"}: suhu modul SFP tinggi (> {$OLT.PON.TEMP.WARN} C)'
+        priority: WARNING
+        description: Ambang awal adalah usulan, bukan spesifikasi modul. Suhu normal saat ini sekitar 44-45 C.
+        tags:
+        - tag: scope
+          value: performance
+      - uuid: 5d002acc4ac641818483b98793fcb236
+        expression: min(/HSGQ GPON OLT by SNMP/olt.pon.sfp.temp[{#SNMPINDEX}],5m)>{$OLT.PON.TEMP.HIGH}
+        name: '{$OLT.PON.NAME:"{#SNMPINDEX}"}: suhu modul SFP sangat tinggi (> {$OLT.PON.TEMP.HIGH} C)'
+        priority: HIGH
+        tags:
+        - tag: scope
+          value: performance
+      - uuid: 15f118751a20404dbc989ffc6ecea47c
+        expression: last(/HSGQ GPON OLT by SNMP/olt.pon.sfp.temp[{#SNMPINDEX}])>0 and max(/HSGQ GPON OLT by SNMP/olt.pon.sfp.tx[{#SNMPINDEX}],5m)<{$OLT.PON.TX.MIN}
+        name: '{$OLT.PON.NAME:"{#SNMPINDEX}"}: daya Tx modul SFP rendah (< {$OLT.PON.TX.MIN} dBm)'
+        priority: WARNING
+        description: Syarat suhu > 0 mencegah alarm palsu untuk PON tanpa modul (PON02). Ambang awal 5 dBm hanya usulan dari baseline 8,1 dBm, sesuaikan dengan datasheet modul.
+        tags:
+        - tag: scope
+          value: performance
+      - uuid: e296a06c67bc46bca53cd61c92b737c8
+        expression: abs(last(/HSGQ GPON OLT by SNMP/olt.pon.onu.c3[{#SNMPINDEX}])-last(/HSGQ GPON OLT by SNMP/olt.pon.onu.c4[{#SNMPINDEX}]))>0 and abs(last(/HSGQ GPON OLT by SNMP/olt.pon.onu.c3[{#SNMPINDEX}])-last(/HSGQ GPON OLT by SNMP/olt.pon.onu.c4[{#SNMPINDEX}]))<{$OLT.PON.ONU.DROP.HIGH}
+        name: '{$OLT.PON.NAME:"{#SNMPINDEX}"}: ada ONU tidak online (registered <> online)'
+        priority: INFO
+        description: 'Tidak bergantung urutan kolom 3 dan 4. BELUM terbukti: baru valid kalau ada ONU yang turun secara alami dan angkanya berbeda.'
+        tags:
+        - tag: scope
+          value: availability
+      - uuid: d6ccf33cb77f4377b24b77db75462fa6
+        expression: abs(last(/HSGQ GPON OLT by SNMP/olt.pon.onu.c3[{#SNMPINDEX}])-last(/HSGQ GPON OLT by SNMP/olt.pon.onu.c4[{#SNMPINDEX}]))>={$OLT.PON.ONU.DROP.HIGH}
+        name: '{$OLT.PON.NAME:"{#SNMPINDEX}"}: banyak ONU turun serentak (>= {$OLT.PON.ONU.DROP.HIGH})'
+        priority: HIGH
+        description: Indikasi serat putus atau gangguan PON. Sama seperti trigger di atas, belum divalidasi dengan kejadian nyata.
+        tags:
+        - tag: scope
+          value: availability
+    - uuid: b5c2c6471e53409ab9771391576dd93a
+      name: ONU discovery
+      type: SNMP_AGENT
+      snmp_oid: discovery[{#ONUNAME},1.3.6.1.4.1.50224.3.12.2.1.2,{#ONUSN},1.3.6.1.4.1.50224.3.12.2.1.15]
+      key: olt.onu.discovery
+      delay: 1h
+      description: '[TERKONFIRMASI] Kolom 2 = nama ONU dan kolom 15 = serial number, cocok dengan UI. Indeks SNMP = 16777472 + nomor ONU di UI (PON01/13 = 16777485).'
+      item_prototypes:
+      - uuid: 58b1e23c360a4384a58e81a826da7a06
+        name: 'ONU {#ONUNAME}: daya Rx'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.4.1.50224.3.12.3.1.4.{#SNMPINDEX}.0.0
+        key: olt.onu.rx[{#SNMPINDEX}]
+        delay: 5m
+        value_type: FLOAT
+        units: dBm
+        description: '[TERKONFIRMASI] Skala 1/100 dan urutan kolom cocok dengan ONT Optical Diagnose. Resolusi hanya 1 dB dan dibulatkan ke bawah (-19,83 menjadi -20). Nilai mengikuti halaman ONT Optical Diagnose; pada satu ONU pernah terlihat selisih besar terhadap kolom Receive Power di ONT Table. Nilai di atas -8 dBm tidak wajar.'
+        preprocessing:
+        - type: MULTIPLIER
+          parameters:
+          - '0.01'
+        tags:
+        - tag: component
+          value: onu
+        - tag: onu
+          value: '{#ONUNAME}'
+        - tag: serial
+          value: '{#ONUSN}'
+      - uuid: 2e55edd1610c4362b5e2b65f0265be09
+        name: 'ONU {#ONUNAME}: jarak'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.4.1.50224.3.12.2.1.19.{#SNMPINDEX}
+        key: olt.onu.distance[{#SNMPINDEX}]
+        delay: 1h
+        units: '!m'
+        description: '[TERKONFIRMASI] 13 dari 13 ONU pertama cocok dengan kolom Distance(m) di ONT Table.'
+        tags:
+        - tag: component
+          value: onu
+        - tag: onu
+          value: '{#ONUNAME}'
+        - tag: serial
+          value: '{#ONUSN}'
+      - uuid: 4cb8f8975c094966b86b31c5bf7a544d
+        name: 'ONU {#ONUNAME}: lama online'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.4.1.50224.3.12.2.1.23.{#SNMPINDEX}
+        key: olt.onu.uptime[{#SNMPINDEX}]
+        delay: 2m
+        value_type: FLOAT
+        units: uptime
+        description: '[TERKONFIRMASI] Centidetik. Waktu Last up time ditambah nilai ini sama dengan waktu walk untuk 2 ONU. Nilai kecil berarti ONU baru online lagi. Nilai untuk ONU offline belum diketahui.'
+        preprocessing:
+        - type: MULTIPLIER
+          parameters:
+          - '0.01'
+        tags:
+        - tag: component
+          value: onu
+        - tag: onu
+          value: '{#ONUNAME}'
+        - tag: serial
+          value: '{#ONUSN}'
+      - uuid: f070c2a9bccf4cb2b4e2544a502895d7
+        name: 'ONU {#ONUNAME}: penyebab down terakhir'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.4.1.50224.3.12.2.1.22.{#SNMPINDEX}
+        key: olt.onu.downcause[{#SNMPINDEX}]
+        delay: 5m
+        trends: '0'
+        value_type: CHAR
+        description: '[TERKONFIRMASI] Cocok dengan Last down cause di ONT Table (contoh Laser out, Power down).'
+        preprocessing:
+        - type: DISCARD_UNCHANGED_HEARTBEAT
+          parameters:
+          - 1d
+        tags:
+        - tag: component
+          value: onu
+        - tag: onu
+          value: '{#ONUNAME}'
+        - tag: serial
+          value: '{#ONUSN}'
+      - uuid: bb01feba6d9d4b62bc941ccbedc48726
+        name: 'ONU {#ONUNAME}: kode status kolom 3'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.4.1.50224.3.12.2.1.3.{#SNMPINDEX}
+        key: olt.onu.stat.c3[{#SNMPINDEX}]
+        delay: 5m
+        history: 14d
+        description: '[DUGAAN] Kolom 3, 4, 5, dan 24 bernilai 1 untuk 52 ONU online. UI menampilkan State=Active, Running state=online, Config state=normal, tetapi pemetaan kolom belum bisa dibedakan. Bandingkan nilainya saat ada ONU yang turun secara alami, lalu jadikan trigger. Tidak ada trigger di item ini.'
+        preprocessing:
+        - type: DISCARD_UNCHANGED_HEARTBEAT
+          parameters:
+          - 1d
+        tags:
+        - tag: component
+          value: onu
+        - tag: onu
+          value: '{#ONUNAME}'
+        - tag: serial
+          value: '{#ONUSN}'
+        - tag: verifikasi
+          value: belum_terbukti
+      - uuid: 63dc7db96ed140ee8ae7c5cb22db2974
+        name: 'ONU {#ONUNAME}: kode status kolom 4'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.4.1.50224.3.12.2.1.4.{#SNMPINDEX}
+        key: olt.onu.stat.c4[{#SNMPINDEX}]
+        delay: 5m
+        history: 14d
+        description: '[DUGAAN] Kolom 3, 4, 5, dan 24 bernilai 1 untuk 52 ONU online. UI menampilkan State=Active, Running state=online, Config state=normal, tetapi pemetaan kolom belum bisa dibedakan. Bandingkan nilainya saat ada ONU yang turun secara alami, lalu jadikan trigger. Tidak ada trigger di item ini.'
+        preprocessing:
+        - type: DISCARD_UNCHANGED_HEARTBEAT
+          parameters:
+          - 1d
+        tags:
+        - tag: component
+          value: onu
+        - tag: onu
+          value: '{#ONUNAME}'
+        - tag: serial
+          value: '{#ONUSN}'
+        - tag: verifikasi
+          value: belum_terbukti
+      - uuid: 5f4745816eff4dff936d2605aec3e87a
+        name: 'ONU {#ONUNAME}: kode status kolom 5'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.4.1.50224.3.12.2.1.5.{#SNMPINDEX}
+        key: olt.onu.stat.c5[{#SNMPINDEX}]
+        delay: 5m
+        history: 14d
+        description: '[DUGAAN] Kolom 3, 4, 5, dan 24 bernilai 1 untuk 52 ONU online. UI menampilkan State=Active, Running state=online, Config state=normal, tetapi pemetaan kolom belum bisa dibedakan. Bandingkan nilainya saat ada ONU yang turun secara alami, lalu jadikan trigger. Tidak ada trigger di item ini.'
+        preprocessing:
+        - type: DISCARD_UNCHANGED_HEARTBEAT
+          parameters:
+          - 1d
+        tags:
+        - tag: component
+          value: onu
+        - tag: onu
+          value: '{#ONUNAME}'
+        - tag: serial
+          value: '{#ONUSN}'
+        - tag: verifikasi
+          value: belum_terbukti
+      - uuid: 9c26ecc0d4064a55a1f281eba17cd10f
+        name: 'ONU {#ONUNAME}: kode status kolom 24'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.4.1.50224.3.12.2.1.24.{#SNMPINDEX}
+        key: olt.onu.stat.c24[{#SNMPINDEX}]
+        delay: 5m
+        history: 14d
+        description: '[DUGAAN] Kolom 3, 4, 5, dan 24 bernilai 1 untuk 52 ONU online. UI menampilkan State=Active, Running state=online, Config state=normal, tetapi pemetaan kolom belum bisa dibedakan. Bandingkan nilainya saat ada ONU yang turun secara alami, lalu jadikan trigger. Tidak ada trigger di item ini.'
+        preprocessing:
+        - type: DISCARD_UNCHANGED_HEARTBEAT
+          parameters:
+          - 1d
+        tags:
+        - tag: component
+          value: onu
+        - tag: onu
+          value: '{#ONUNAME}'
+        - tag: serial
+          value: '{#ONUSN}'
+        - tag: verifikasi
+          value: belum_terbukti
+      trigger_prototypes:
+      - uuid: 30fe7076fd96437f8328e9ba8ce6d379
+        expression: max(/HSGQ GPON OLT by SNMP/olt.onu.rx[{#SNMPINDEX}],15m)<={$OLT.ONU.RX.WARN} and max(/HSGQ GPON OLT by SNMP/olt.onu.rx[{#SNMPINDEX}],15m)>{$OLT.ONU.RX.HIGH}
+        name: 'ONU {#ONUNAME}: daya Rx rendah (<= {$OLT.ONU.RX.WARN} dBm)'
+        priority: WARNING
+        description: Rx dibulatkan ke bawah (resolusi 1 dB), nilai asli bisa sampai 1 dB lebih baik. Ambang awal adalah usulan, bukan spesifikasi model ONU Anda.
+        tags:
+        - tag: scope
+          value: performance
+      - uuid: 47bf2e08312d45999e6f07837780ed6c
+        expression: max(/HSGQ GPON OLT by SNMP/olt.onu.rx[{#SNMPINDEX}],15m)<={$OLT.ONU.RX.HIGH}
+        name: 'ONU {#ONUNAME}: daya Rx sangat rendah (<= {$OLT.ONU.RX.HIGH} dBm)'
+        priority: HIGH
+        description: Mendekati batas sensitivitas penerima. Periksa konektor, adapter, dan lengkungan kabel di sisi pelanggan.
+        tags:
+        - tag: scope
+          value: performance
+      - uuid: 0f6c39516eff4becb7598a7ff31f8a1d
+        expression: min(/HSGQ GPON OLT by SNMP/olt.onu.rx[{#SNMPINDEX}],15m)>{$OLT.ONU.RX.OVERLOAD}
+        name: 'ONU {#ONUNAME}: nilai Rx tidak wajar (> {$OLT.ONU.RX.OVERLOAD} dBm)'
+        priority: INFO
+        description: Bisa overload sungguhan atau pembacaan yang salah. Pada satu ONU pernah terbaca +1,49 dBm di ONT Optical Diagnose, sementara ONT Table menunjukkan -19,36 dBm; nilai itu kemudian kembali normal.
+        tags:
+        - tag: scope
+          value: performance
+      - uuid: aff2bc4960aa4d3e9564ca5d12edf37e
+        expression: last(/HSGQ GPON OLT by SNMP/olt.onu.uptime[{#SNMPINDEX}])<{$OLT.ONU.RECONNECT.SEC}
+        name: 'ONU {#ONUNAME}: baru online atau offline (lama online < {$OLT.ONU.RECONNECT.SEC} detik)'
+        priority: INFO
+        description: ONU baru tersambung lagi atau mati. Perilaku nilai saat ONU offline belum terbukti, jadi gunakan bersama trigger jumlah ONU per PON.
+        tags:
+        - tag: scope
+          value: availability
+    macros:
+    - macro: '{$OLT.IF.MATCHES}'
+      value: ^(PON|GE|XGE)[0-9]+$
+      description: Regex nama port yang ditemukan. Mengecualikan vlanif0.
+    - macro: '{$OLT.IF.ALERT}'
+      value: '0'
+      description: 1 = alarm link down aktif. Default 0 supaya port yang memang tidak dipakai tidak mengalarm. Atur per port lewat konteks.
+    - macro: '{$OLT.IF.ALERT:"PON01"}'
+      value: '1'
+    - macro: '{$OLT.IF.ALERT:"GE01"}'
+      value: '1'
+    - macro: '{$OLT.IF.CAP.MBPS}'
+      value: '0'
+      description: Kapasitas link (Mbps) untuk alarm utilisasi. 0 = alarm utilisasi nonaktif.
+    - macro: '{$OLT.IF.CAP.MBPS:"GE01"}'
+      value: '100'
+      description: BELUM TERKONFIRMASI. Nilai ini dari ifHighSpeed yang dilaporkan OLT. Cek di Status > Uplink.
+    - macro: '{$OLT.IF.UTIL.WARN}'
+      value: '80'
+      description: Ambang utilisasi (%) dari makro kapasitas.
+    - macro: '{$OLT.IF.ERRORS.WARN}'
+      value: '2'
+      description: Ambang error/discard per detik.
+    - macro: '{$OLT.MEM.WARN}'
+      value: '80'
+      description: Sama dengan ambang alarm memori bawaan OLT (80%).
+    - macro: '{$OLT.MEM.HIGH}'
+      value: '90'
+    - macro: '{$OLT.CPU.WARN}'
+      value: '80'
+      description: Persen. Sama dengan ambang alarm CPU bawaan OLT (80%).
+    - macro: '{$OLT.UPTIME.MIN}'
+      value: '600'
+      description: Detik. Di bawah ini dianggap baru restart.
+    - macro: '{$OLT.PON.NAME}'
+      value: PON?
+      description: Nama PON berdasarkan indeks SNMP. Tambahkan konteks jika ada PON baru.
+    - macro: '{$OLT.PON.NAME:"16777472"}'
+      value: PON01
+    - macro: '{$OLT.PON.NAME:"16777728"}'
+      value: PON02
+    - macro: '{$OLT.PON.TEMP.WARN}'
+      value: '65'
+      description: Usulan awal (C). Normal saat ini sekitar 44-45.
+    - macro: '{$OLT.PON.TEMP.HIGH}'
+      value: '75'
+      description: Usulan awal (C).
+    - macro: '{$OLT.PON.TX.MIN}'
+      value: '5'
+      description: Usulan awal (dBm), dari baseline 8,1 dBm. Sesuaikan dengan datasheet modul.
+    - macro: '{$OLT.PON.ONU.DROP.HIGH}'
+      value: '5'
+      description: Jumlah ONU turun serentak untuk severity High.
+    - macro: '{$OLT.ONU.RX.WARN}'
+      value: '-26'
+      description: dBm. Usulan awal, belum divalidasi untuk model ONU Anda.
+    - macro: '{$OLT.ONU.RX.HIGH}'
+      value: '-28'
+      description: dBm. Usulan awal.
+    - macro: '{$OLT.ONU.RX.OVERLOAD}'
+      value: '-8'
+      description: dBm. Di atas ini dianggap tidak wajar.
+    - macro: '{$OLT.ONU.RECONNECT.SEC}'
+      value: '600'
+      description: Detik. Lama online di bawah ini dianggap baru tersambung lagi.
+    valuemaps:
+    - uuid: f2d578f56a6641669abdad864c96ef62
+      name: IF-MIB ifOperStatus
+      mappings:
+      - value: '1'
+        newvalue: up
+      - value: '2'
+        newvalue: down
